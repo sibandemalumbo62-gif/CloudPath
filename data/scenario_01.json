@@ -1,0 +1,50 @@
+{
+  "scenario": "iam_privesc_by_key_rotation",
+  "source": "CloudGoat",
+  "nodes": [
+    {
+      "node_id": "user:manager",
+      "node_type": "user",
+      "name": "manager",
+      "sensitivity": "standard"
+    },
+    {
+      "node_id": "user:admin",
+      "node_type": "user",
+      "name": "admin",
+      "sensitivity": "privileged"
+    },
+    {
+      "node_id": "role:secretsmanager",
+      "node_type": "role",
+      "name": "secretsmanager-role",
+      "sensitivity": "sensitive"
+    },
+    {
+      "node_id": "secret:flag",
+      "node_type": "resource",
+      "name": "AWS Secrets Manager secret",
+      "sensitivity": "critical"
+    }
+  ],
+  "edges": [
+    {
+      "source": "user:manager",
+      "target": "user:admin",
+      "edge_type": "credential_control",
+      "permission": "iam:CreateAccessKey"
+    },
+    {
+      "source": "user:admin",
+      "target": "role:secretsmanager",
+      "edge_type": "assume_role",
+      "permission": "sts:AssumeRole"
+    },
+    {
+      "source": "role:secretsmanager",
+      "target": "secret:flag",
+      "edge_type": "read",
+      "permission": "secretsmanager:GetSecretValue"
+    }
+  ]
+}

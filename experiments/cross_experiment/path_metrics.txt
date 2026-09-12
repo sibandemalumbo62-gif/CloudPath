@@ -1,0 +1,24 @@
+======================================================================
+CLOUDPATH CROSS-EXPERIMENT PATH METRICS
+======================================================================
+
+Experiment 01
+----------------------------------------------------------------------
+Path length: 3
+Credential transitions: 1
+Unique edge types: 3
+Unique permissions: 3
+
+Experiment 02
+----------------------------------------------------------------------
+Path length: 5
+Credential transitions: 2
+Unique edge types: 2
+Unique permissions: 5
+
+Experiment 03
+----------------------------------------------------------------------
+Path length: 11
+Credential transitions: 5
+Unique edge types: 2
+Unique permissions: 11

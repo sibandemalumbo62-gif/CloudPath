@@ -1,0 +1,72 @@
+{
+  "nodes": [
+    {
+      "node_id": "user:low-priv-user",
+      "node_type": "user",
+      "name": "low-priv-user",
+      "sensitivity": "standard"
+    },
+    {
+      "node_id": "resource:ec2",
+      "node_type": "resource",
+      "name": "EC2 instance",
+      "sensitivity": "sensitive"
+    },
+    {
+      "node_id": "role:ec2-instance",
+      "node_type": "role",
+      "name": "EC2 instance profile role",
+      "sensitivity": "sensitive"
+    },
+    {
+      "node_id": "function:lambda",
+      "node_type": "function",
+      "name": "Lambda function",
+      "sensitivity": "sensitive"
+    },
+    {
+      "node_id": "credential:lambda-key",
+      "node_type": "resource",
+      "name": "AWS access key discovered in Lambda environment",
+      "sensitivity": "critical"
+    },
+    {
+      "node_id": "secret:flag",
+      "node_type": "resource",
+      "name": "AWS Secrets Manager secret",
+      "sensitivity": "critical"
+    }
+  ],
+  "edges": [
+    {
+      "source": "user:low-priv-user",
+      "target": "resource:ec2",
+      "edge_type": "read",
+      "permission": "ec2:Describe*"
+    },
+    {
+      "source": "resource:ec2",
+      "target": "role:ec2-instance",
+      "edge_type": "credential_control",
+      "permission": "ec2:InstanceMetadata"
+    },
+    {
+      "source": "role:ec2-instance",
+      "target": "function:lambda",
+      "edge_type": "read",
+      "permission": "lambda:ListFunctions"
+    },
+    {
+      "source": "function:lambda",
+      "target": "credential:lambda-key",
+      "edge_type": "credential_control",
+      "permission": "lambda:GetFunctionConfiguration"
+    },
+    {
+      "source": "credential:lambda-key",
+      "target": "secret:flag",
+      "edge_type": "read",
+      "permission": "secretsmanager:GetSecretValue"
+    }
+  ]
+}

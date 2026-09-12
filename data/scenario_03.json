@@ -1,0 +1,144 @@
+{
+  "nodes": [
+    {
+      "node_id": "user:low-priv-user",
+      "node_type": "user",
+      "name": "low-priv-user",
+      "sensitivity": "standard"
+    },
+    {
+      "node_id": "resource:s3",
+      "node_type": "resource",
+      "name": "S3 bucket containing web application URL",
+      "sensitivity": "sensitive"
+    },
+    {
+      "node_id": "resource:web-app",
+      "node_type": "resource",
+      "name": "EC2-hosted web application",
+      "sensitivity": "sensitive"
+    },
+    {
+      "node_id": "function:lambda",
+      "node_type": "function",
+      "name": "Lambda function containing application API key",
+      "sensitivity": "sensitive"
+    },
+    {
+      "node_id": "credential:api-key",
+      "node_type": "resource",
+      "name": "Web application API key",
+      "sensitivity": "critical"
+    },
+    {
+      "node_id": "credential:vault-token",
+      "node_type": "resource",
+      "name": "HashiCorp Vault token",
+      "sensitivity": "critical"
+    },
+    {
+      "node_id": "credential:ssh-key",
+      "node_type": "resource",
+      "name": "EC2 SSH private key",
+      "sensitivity": "critical"
+    },
+    {
+      "node_id": "resource:ec2",
+      "node_type": "resource",
+      "name": "EC2 instance",
+      "sensitivity": "sensitive"
+    },
+    {
+      "node_id": "role:ec2-instance",
+      "node_type": "role",
+      "name": "EC2 instance profile role",
+      "sensitivity": "sensitive"
+    },
+    {
+      "node_id": "resource:dynamodb",
+      "node_type": "resource",
+      "name": "DynamoDB table containing IAM credentials",
+      "sensitivity": "critical"
+    },
+    {
+      "node_id": "credential:iam-user",
+      "node_type": "resource",
+      "name": "Discovered IAM user credentials",
+      "sensitivity": "critical"
+    },
+    {
+      "node_id": "secret:flag",
+      "node_type": "resource",
+      "name": "AWS Secrets Manager secret",
+      "sensitivity": "critical"
+    }
+  ],
+  "edges": [
+    {
+      "source": "user:low-priv-user",
+      "target": "resource:s3",
+      "edge_type": "read",
+      "permission": "s3:GetObject"
+    },
+    {
+      "source": "resource:s3",
+      "target": "resource:web-app",
+      "edge_type": "read",
+      "permission": "s3:DiscoveredURL"
+    },
+    {
+      "source": "resource:web-app",
+      "target": "function:lambda",
+      "edge_type": "read",
+      "permission": "lambda:ListFunctions"
+    },
+    {
+      "source": "function:lambda",
+      "target": "credential:api-key",
+      "edge_type": "credential_control",
+      "permission": "lambda:GetFunctionConfiguration"
+    },
+    {
+      "source": "credential:api-key",
+      "target": "credential:vault-token",
+      "edge_type": "credential_control",
+      "permission": "vault:Authenticate"
+    },
+    {
+      "source": "credential:vault-token",
+      "target": "credential:ssh-key",
+      "edge_type": "credential_control",
+      "permission": "vault:ReadSecret"
+    },
+    {
+      "source": "credential:ssh-key",
+      "target": "resource:ec2",
+      "edge_type": "read",
+      "permission": "ssh:Login"
+    },
+    {
+      "source": "resource:ec2",
+      "target": "role:ec2-instance",
+      "edge_type": "credential_control",
+      "permission": "ec2:InstanceMetadata"
+    },
+    {
+      "source": "role:ec2-instance",
+      "target": "resource:dynamodb",
+      "edge_type": "read",
+      "permission": "dynamodb:ListTables"
+    },
+    {
+      "source": "resource:dynamodb",
+      "target": "credential:iam-user",
+      "edge_type": "credential_control",
+      "permission": "dynamodb:GetItem"
+    },
+    {
+      "source": "credential:iam-user",
+      "target": "secret:flag",
+      "edge_type": "read",
+      "permission": "secretsmanager:GetSecretValue"
+    }
+  ]
+}
