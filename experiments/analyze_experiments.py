@@ -1,21 +1,22 @@
-from pathlib import Path
+﻿from pathlib import Path
 import re
 
 
 EXPERIMENTS = [
     Path("experiments/experiment_01/results.txt"),
     Path("experiments/experiment_02/results.txt"),
+    Path("experiments/experiment_03/results.txt"),
 ]
 
+OUTPUT_FILE = Path("experiments/cross_experiment/results.txt")
 
-def read_result_file(path):
+
+def read_result_file(path: Path) -> str:
     raw = path.read_bytes()
 
-    # Handle common Windows/PowerShell encodings.
-    if raw.startswith(b"\xff\xfe"):
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
         return raw.decode("utf-16")
-    if raw.startswith(b"\xfe\xff"):
-        return raw.decode("utf-16")
+
     if raw.startswith(b"\xef\xbb\xbf"):
         return raw.decode("utf-8-sig")
 
@@ -25,25 +26,19 @@ def read_result_file(path):
         return raw.decode("utf-16")
 
 
-def extract_results(path):
+def extract_results(path: Path) -> dict:
     text = read_result_file(path)
-
     baseline_section = text.split("PATH-AWARE: CLOUDPATH")[0]
 
     baseline_scores = [
         int(value)
-        for value in re.findall(
-            r"\(score=(\d+)\)",
-            baseline_section,
-        )
+        for value in re.findall(r"\(score=(\d+)\)", baseline_section)
     ]
 
     if not baseline_scores:
-        raise ValueError(
-            f"Could not find baseline scores in {path}"
-        )
+        raise ValueError(f"Could not find baseline scores in {path}")
 
-    cloudpath_match = re.search(
+    match = re.search(
         r"Severity:\s+(\w+).*?"
         r"Risk score:\s+(\d+).*?"
         r"Path length:\s+(\d+)",
@@ -51,81 +46,92 @@ def extract_results(path):
         re.DOTALL,
     )
 
-    if cloudpath_match is None:
-        raise ValueError(
-            f"Could not parse CloudPath result from {path}"
-        )
-
-    severity = cloudpath_match.group(1)
-    cloudpath_score = int(cloudpath_match.group(2))
-    path_length = int(cloudpath_match.group(3))
+    if match is None:
+        raise ValueError(f"Could not parse CloudPath result from {path}")
 
     return {
         "file": str(path),
         "baseline_scores": baseline_scores,
         "baseline_max": max(baseline_scores),
-        "cloudpath_score": cloudpath_score,
-        "severity": severity,
-        "path_length": path_length,
+        "cloudpath_score": int(match.group(2)),
+        "severity": match.group(1),
+        "path_length": int(match.group(3)),
     }
 
 
-def main():
-    results = [
-        extract_results(path)
-        for path in EXPERIMENTS
+def main() -> None:
+    results = [extract_results(path) for path in EXPERIMENTS]
+    lines = [
+        "=" * 70,
+        "CLOUDPATH CROSS-EXPERIMENT ANALYSIS",
+        "=" * 70,
+        "",
     ]
 
-    print("=" * 70)
-    print("CLOUDPATH CROSS-EXPERIMENT ANALYSIS")
-    print("=" * 70)
-    print()
+    for index, result in enumerate(results, start=1):
+        lines.extend([
+            f"EXPERIMENT {index:02d}",
+            "-" * 70,
+            f"Source file: {result['file']}",
+            f"Baseline scores: {result['baseline_scores']}",
+            f"Baseline maximum: {result['baseline_max']}",
+            f"CloudPath score: {result['cloudpath_score']}",
+            f"CloudPath severity: {result['severity'].upper()}",
+            f"Path length: {result['path_length']}",
+            "",
+        ])
+
+    lines.extend([
+        "CROSS-EXPERIMENT COMPARISON",
+        "-" * 70,
+    ])
 
     for index, result in enumerate(results, start=1):
-        print(f"EXPERIMENT {index}")
-        print("-" * 70)
-        print(f"Source file: {result['file']}")
-        print(f"Baseline scores: {result['baseline_scores']}")
-        print(f"Baseline maximum: {result['baseline_max']}")
-        print(f"CloudPath score: {result['cloudpath_score']}")
-        print(f"CloudPath severity: {result['severity']}")
-        print(f"Path length: {result['path_length']}")
-        print()
+        difference = result["cloudpath_score"] - result["baseline_max"]
 
-    print("CROSS-EXPERIMENT COMPARISON")
-    print("-" * 70)
-
-    for index, result in enumerate(results, start=1):
-        difference = (
-            result["cloudpath_score"]
-            - result["baseline_max"]
-        )
-
-        print(
-            f"Experiment {index}: "
+        lines.append(
+            f"Experiment {index:02d}: "
             f"CloudPath {result['cloudpath_score']} "
             f"- baseline max {result['baseline_max']} "
             f"= difference {difference}"
         )
 
-    cloudpath_higher = all(
+    all_higher = all(
         result["cloudpath_score"] > result["baseline_max"]
         for result in results
     )
 
-    print()
+    lines.append("")
 
-    if cloudpath_higher:
-        print(
-            "Observed pattern: CloudPath produced a higher "
-            "risk score than the highest individual baseline "
-            "finding in both experiments."
+    if all_higher:
+        lines.append(
+            f"Observed pattern: CloudPath produced a higher risk score "
+            f"than the highest individual baseline finding in all "
+            f"{len(results)} modeled experiments."
         )
     else:
-        print(
-            "Observed pattern: The same higher-score relationship "
-            "was not observed in every experiment."
+        lines.append(
+            "Observed pattern: CloudPath did not produce a higher "
+            "risk score than the individual baseline in every experiment."
         )
+
+    lines.extend([
+        "",
+        "EVIDENCE LIMITATION",
+        "-" * 70,
+        "The baseline is hand-authored and is not a commercial cloud-security product.",
+        "Results are limited to the locally modeled scenarios and current scoring rules.",
+        "Higher scores do not establish superior detection or real-world security effectiveness.",
+    ])
+
+    output = "\n".join(lines) + "\n"
+
+    print(output)
+
+    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT_FILE.write_text(output, encoding="utf-8")
+
+    print(f"Report saved to: {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":

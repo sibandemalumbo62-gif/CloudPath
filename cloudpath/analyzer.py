@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 
 import networkx as nx
 
+from cloudpath.graph import build_graph
 from cloudpath.models import Edge, Node
 
 
@@ -11,28 +12,6 @@ class AttackPath:
     target: str
     nodes: tuple[str, ...]
     edges: tuple[tuple[str, str, str, str], ...]
-
-
-def build_graph(nodes: list[Node], edges: list[Edge]) -> nx.DiGraph:
-    graph = nx.DiGraph()
-
-    for node in nodes:
-        graph.add_node(
-            node.node_id,
-            node_type=node.node_type.value,
-            name=node.name,
-            sensitivity=node.sensitivity,
-        )
-
-    for edge in edges:
-        graph.add_edge(
-            edge.source,
-            edge.target,
-            edge_type=edge.edge_type.value,
-            permission=edge.permission,
-        )
-
-    return graph
 
 
 def find_attack_paths(
